@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Collaborative Scarf Pattern Generator</title>
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+  <link href="narrow.css" rel="stylesheet">
+</head>
+<body>
+
+  <div class="container">
+        <div class="header clearfix">
+          <nav>
+            <ul class="nav nav-pills pull-right">
+              <li role="presentation" class="active"><a href="index.html">Maker</a></li>
+              <li role="presentation"><a href="viewer.html">Viewer</a></li>
+              <li role="presentation"><a href="about.html">About</a></li>
+            </ul>
+          </nav>
+          <h3 class="text-muted">Collaborative Scarf Pattern Generator</h3>
+        </div>
+
+
+      <div class="text-center">
+
+        <p>
+          <button class="btn btn-danger pull-left" id="btnClear">Start again!</button>
+          <div id="label_counter">0</div>
+          <button class="btn btn-success pull-right" id="btnSubmit">This is worthy of showing everyone!</button>
+        </p>
+        <p id="container_canvas"></p>
+
+        <p>
+          <div class="row">
+          <div class="col-xs-3 col-xs-offset-1">
+
+            <div class="btn-group" role="group">
+              <button type="button" class="btn btn-primary" id="btnSwitchAll">all</button>
+              <button type="button" class="btn btn-default" id="btnSwitchDanielles">danielles</button>
+            </div>
+
+            <select class="form-control" id="select_colour" size="10">
+            </select>
+            <p><a class="link" target="_blank" href="https://www.loveknitting.com/paintbox-yarns-cotton-aran">
+              where these colours come from</a></p>
+          </div>
+
+          <button class="btn btn-default" id="btnGo">add</button>
+          <button class="btn btn-default" id="btnOops">oops</button>
+        </p>
+
+      </div>
+      </div>
+
+      <div class="row" style="margin-top:20px;">
+        <div class="alert alert-warning col-md-8 col-xs-offset-2 text-center" role="alert" style="padding-top:0px;">
+          <h3>Competition Time</h3>
+          <p>Would you like a scarf made by me? If so, please read on!</p>
+          <p>Whoever has the scarf with the most upvotes by the end of October 2017, with a valid twitter handle I will make (and mail) them their scarf*</p>
+          <small>* Not legally binding, I'll do my best but please don't hate me! I have no idea what I'm doing!</small>
+        </div>
+      </div>
+
+      <footer class="footer">
+      <div class="container">
+        <p class="text-muted text-center">
+          <a href="https://twitter.com/de_velopment" target="_blank"><i class="fa fa-twitter" aria-hidden="true"></i> @de_velopment</a> |
+          <a href="https://github.com/daniellevass" target="_blank"><i class="fa fa-github" aria-hidden="true"></i> @daniellevass</a> |
+          <a href="http://www.de-velopment.com" target="_blank"><i class="fa fa-globe" aria-hidden="true"></i> www.de-velopment.com</a>
+        </p>
+      </div>
+      </footer>
+
+  </div><!-- end container-->
+
+
+  <div id="modal_submit" class="modal fade" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">Great, let's show everyone else your scarf too!</h4>
+      </div>
+      <div class="modal-body">
+        <p>But first, we need some information from you!</p>
+        <p class="text-danger" id="lblError"></p>
+        <form>
+          <div class="form-group">
+            <label for="txtName">Your Name (shown publically)</label>
+            <input type="text" class="form-control" id="txtName" placeholder="Your Name">
+          </div>
+
+          <div class="form-group">
+            <label for="txtName">Scarf Name (shown publically)</label>
+            <input type="text" class="form-control" id="txtScarfName" placeholder="Scarf Name">
+          </div>
+
+          <div class="form-group">
+            <label for="txtEmail">Twitter handle (not public, only fill if joining the competition!)</label>
+            <input type="email" class="form-control" id="txtEmail" placeholder="Email">
+          </div>
+        </form>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" id="btnSubmitModal">Save my fabulous scarf</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+
+</body>
+<script src="https://code.jquery.com/jquery-2.2.4.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.1.0/raphael-min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/4.5.0/firebase.js"></script>
+<script src="https://www.gstatic.com/firebasejs/4.5.0/firebase-firestore.js"></script>
+<script src="https://use.fontawesome.com/ba9da8c2e5.js"></script>
+
+<script src="colours.js"></script>
+<script src="config.js"></script>
+
+
+
+<script>
+
+console.log("colours = " + yarn_colours.length);
+var btnGo = $("#btnGo");
+var btnOops = $("#btnOops");
+var btnClear = $("#btnClear");
+var select_colour = $("#select_colour");
+var label_counter = $("#label_counter");
+var btnSwitchAll = $("#btnSwitchAll");
+var btnSwitchDanielles = $("#btnSwitchDanielles");
+var btnSubmit = $("#btnSubmit");
+var btnSubmitModal = $("#btnSubmitModal");
+var txtEmail = $("#txtEmail");
+var txtName = $("#txtName");
+var txtScarfName = $("#txtScarfName");
+var lblError = $("#lblError");
+
+var paper;
+var lines = [];
+var lineWidth = 10;
+var colour = "#ffcc00";
+var error;
+
+btnClear.click(function(){
+	clear();
+});
+
+function clear(){
+  paper.remove();
+	paper = Raphael(document.getElementById('container_canvas'), 1000, 200);
+  lines = [];
+  label_counter.html(lines.length);
+
+  txtName.val("");
+  txtEmail.val("");
+}
+btnGo.click(function(){
+  if (lines.length >= 100) {
+    console.log("hit the max");
+    return;
+  }
+
+  addLine();
+
+});
+
+function addLine(){
+  var x = (lines.length * lineWidth ) + 10;
+  var line = paper.path("M"+x+",50 l 0,100");
+  line.attr("stroke-width", lineWidth);
+  line.attr("stroke", colour);
+ 	line.attr("stroke-linecap","round")
+  lines.push(line);
+  label_counter.html(lines.length);
+}
+
+btnOops.click(function(){
+  if (lines.length == 0) {
+    console.log("no lines to remove!");
+    return;
+  }
+	var line = lines[lines.length-1];
+  line.remove();
+  lines.splice(-1,1);
+  label_counter.html(lines.length);
+})
+
+paper = Raphael(document.getElementById('container_canvas'), 1020, 200);
+
+function populateSelect(everything){
+  var innerHtml = "";
+
+  for (var index in yarn_colours){
+
+    if (everything || yarn_colours[index].danielles) {
+      innerHtml += "<option style='background:#"+yarn_colours[index].hex+"' value='"+yarn_colours[index].hex+"'>"
+      +yarn_colours[index].name+"</option>"
+    }
+
+  }
+
+  select_colour.html(innerHtml);
+}
+
+select_colour.change(function() {
+  console.log("colour =" + select_colour.val());
+    colour = "#" + select_colour.val();
+});
+
+populateSelect(true);
+
+btnSwitchAll.click(function(){
+  populateSelect(true);
+  btnSwitchAll.attr("class", "btn btn-primary");
+  btnSwitchDanielles.attr("class", "btn btn-default");
+})
+
+btnSwitchDanielles.click(function(){
+  populateSelect(false);
+  btnSwitchDanielles.attr("class", "btn btn-primary");
+  btnSwitchAll.attr("class", "btn btn-default");
+})
+
+
+btnSubmit.click(function(){
+  $('#modal_submit').modal('toggle')
+});
+
+btnSubmitModal.click(function(){
+  if (validForm()) {
+    saveForm();
+  }
+  lblError.html(error);
+});
+
+function validForm(){
+
+  if (lines.length < 10) {
+    error = "please have a scarf with at least 50 lines!";
+    return false;
+  }
+
+  if (txtName.val().length < 3) {
+    error = "your name has to be more than 3 characters!";
+    return false;
+  }
+
+  if (txtScarfName.val().length < 3) {
+    error = "your scarf name has to be more than 3 characters!";
+    return false;
+  }
+  error = "";
+  return true;
+}
+
+function saveForm(){
+
+  var scarfInfo = "";
+
+  for (var i in lines){
+    scarfInfo += lines[i].attr("stroke");
+    scarfInfo +=" ";
+  }
+
+  var info = {
+    name : txtName.val(),
+    scarf_name : txtScarfName.val(),
+    email : txtEmail.val(),
+    scarf : scarfInfo,
+    upvotes : 0
+  };
+
+  $("#btnSubmitModal").html('<i class="fa fa-spinner fa-pulse fa-fw"></i>');
+  $("#btnSubmitModal").addClass('disabled');
+
+  db.collection("scarves").add(info)
+  .then(function(docRef) {
+    $("#modal_submit").modal('toggle')
+    clear();
+    $("#btnSubmitModal").html("Save my fabulous scarf");
+    $("#btnSubmitModal").removeClass('disabled');
+  })
+  .catch(function(error) {
+      alert("Error : ", error);
+  });
+
+
+
+}
+
+</script>
+</html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Collaborative Scarf Pattern Generator</title>
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+  <link href="narrow.css" rel="stylesheet">
+</head>
+<body>
+
+  <div class="container">
+        <div class="header clearfix">
+          <nav>
+            <ul class="nav nav-pills pull-right">
+              <li role="presentation"><a href="index.html">Maker</a></li>
+              <li role="presentation" class="active"><a href="viewer.html">Viewer</a></li>
+              <li role="presentation"><a href="about.html">About</a></li>
+            </ul>
+          </nav>
+          <h3 class="text-muted">Collaborative Scarf Pattern Generator</h3>
+        </div>
+
+
+      <div class="text-center" id="container">
+        <i class="fa fa-spinner fa-pulse fa-3x fa-fw"></i>
+      </div>
+
+      <footer class="footer">
+      <div class="container">
+        <p class="text-muted text-center">
+          <a href="https://twitter.com/de_velopment" target="_blank"><i class="fa fa-twitter" aria-hidden="true"></i> @de_velopment</a> |
+          <a href="https://github.com/daniellevass" target="_blank"><i class="fa fa-github" aria-hidden="true"></i> @daniellevass</a> |
+          <a href="http://www.de-velopment.com" target="_blank"><i class="fa fa-globe" aria-hidden="true"></i> www.de-velopment.com</a>
+        </p>
+      </div>
+    </footer>
+
+    </div>
+  </body>
+  <script src="https://code.jquery.com/jquery-2.2.4.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.1.0/raphael-min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/4.5.0/firebase.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/4.5.0/firebase-firestore.js"></script>
+  <script src="https://use.fontawesome.com/ba9da8c2e5.js"></script>
+
+  <script src="colours.js"></script>
+  <script src="config.js"></script>
+
+  <script>
+  var container = $("#container");
+  var likes = [];
+
+
+  function getLikes(){
+
+    db.collection("likes").where("uid", "==", user.uid).get().then(function(snapshot) {
+      snapshot.forEach(function(doc) {
+          likes.push(doc.data().like);
+      });
+    });
+
+      getScarves();
+    }
+
+  function getScarves(){
+
+    db.collection("scarves").orderBy("upvotes", "desc").get().then(function(snapshot) {
+      var html="";
+      snapshot.forEach(function(doc) {
+        html+= generateItem(doc.data(), doc.id);
+      });
+      container.html(html);
+    });
+  }
+
+  function generateItem(data, key){
+    var item = "<div class=\"col-md-12 well\">";
+    item += `<p>${data.scarf_name} by ${data.name} `;
+
+    var style = "default";
+
+    if (likes.indexOf(key) != -1) {
+      style = "warning"
+    }
+
+    item +=`<button type="button" class="btn btn-${style} btn-lg pull-right"`;
+
+    if (likes.indexOf(key) != -1) {
+        item += "disabled='disabled'";
+    }
+
+    item +=` id='upvote_${key}' `
+    item+=`onclick="upvote('${key}');">
+            <span class="glyphicon glyphicon-star" aria-hidden="true"></span> ${data.upvotes}
+          </button> </p>`;
+    item += generateSVG(data.scarf);
+    item += "</div>";
+    return item;
+  }
+  function generateSVG(scarf){
+    var svgItems = scarf.split(" ");
+    var lineWidth = 8;
+    var width = (svgItems.length * lineWidth );
+    var svg = `<svg height='55' width='${width}'>`;
+    for(var i in svgItems){
+      var colour = svgItems[i];
+      var x = (i* lineWidth) + lineWidth;
+      svg += `<line x1='${x}' x2='${x}' y1='5' y2='50' stroke='${colour}' stroke-width='8' stroke-linecap='round' />`
+    }
+
+    svg +="</svg>"
+    return svg;
+  }
+
+  function upvote(id){
+
+    if (likes.indexOf(id) != -1) {
+      console.log("already liked this shit!");
+      //todo unlike?
+      return true;
+    }
+
+    likes.push(id);
+
+    var form = {
+      'uid': user.uid,
+      'like': id
+    }
+
+    db.collection("likes").add(form)
+    .then(function(docRef) {
+        console.log("Document written with ID: ", docRef.id);
+    })
+    .catch(function(error) {
+        console.error("Error adding document: ", error);
+    });
+
+    $("#upvote_" + id).removeClass("btn-default");
+    $("#upvote_" + id).addClass("btn-warning");
+
+    incrementCounter(id);
+  }
+
+  function incrementCounter(key){
+
+    const scarf = db.collection('scarves').doc(key);
+
+    return db.runTransaction(t => {
+        return t.get(scarf).then(doc => {
+            const new_count = doc.data().upvotes + 1;
+            t.update(scarf, { upvotes: new_count });
+            $("#upvote_" + doc.id).html('<span class="glyphicon glyphicon-star" aria-hidden="true"></span> ' + new_count);
+        });
+    });
+  }
+
+  firebase.auth().onAuthStateChanged(function(u) {
+    if (u) {
+      getLikes();
+    }
+
+  });
+
+  </script>
